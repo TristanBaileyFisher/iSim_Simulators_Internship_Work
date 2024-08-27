@@ -1,0 +1,168 @@
+import { TapeV2 } from "devtools";
+import { useState, useEffect } from "react";
+import { Layer, Stage, Rect, Line, Group, Text } from "react-konva";
+
+export const Proline_dials = (): JSX.Element => {
+  const [speed, setSpeed] = useState(0);
+  const [IsupPressed, setIsupPressed] = useState(false);
+  const [IsDownPressed, setIsDownPressed] = useState(false);
+  const acceleration = 0.1;
+
+  const [lineY, setLineY] = useState(100); // Initial Y position for LineMain
+
+  const handleUserInput = (value: number) => {
+    if (value > 50) { // Example threshold
+      console.log("Value exceeded threshold! Trigger side-effect.");
+      // Trigger your side-effect here
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (IsupPressed) {
+        setSpeed(prevSpeed => {
+          // Accelerate and limit speed
+          const newSpeed = Math.min(prevSpeed + acceleration);
+          handleUserInput(newSpeed);
+          return newSpeed;
+        });
+      } else if (IsDownPressed) {
+        setSpeed(prevSpeed => {
+          const newSpeed = Math.max(prevSpeed - acceleration);
+          handleUserInput(newSpeed);
+          return newSpeed;
+        });
+      } else {
+        // Decelerate when the button is not pressed
+        setSpeed(prevSpeed => {
+          if (prevSpeed > 0) {
+            const newSpeed = Math.max(prevSpeed - acceleration, 0);
+            handleUserInput(newSpeed);
+            return newSpeed;
+          } else if (prevSpeed < 0) {
+            const newSpeed = Math.min(prevSpeed + acceleration, 0);
+            handleUserInput(newSpeed);
+            return newSpeed;
+          }
+          return prevSpeed;
+        });
+      }
+    }, 20); // Adjust the interval as needed
+
+    return () => clearInterval(interval); // Cleanup interval on component unmount
+  }, [IsupPressed, IsDownPressed]);
+
+  useEffect(() => {
+    // Update lineY based on speed
+    setLineY(prevLineY => {
+      const newLineY = prevLineY + speed;
+      console.log(`Updating lineY: ${newLineY}`);
+      return newLineY;
+    });
+  }, [speed]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div>
+        <Stage width={window.innerWidth} height={window.innerHeight}>
+          <Layer>
+            <Boarder lineY={lineY} />
+            <TapeV2 centerOffset={20} pxPerUnit={20} tickDenominator={50} drawnRange={10} redrawThreshold={20} tickLogic={23} uuidPrefix="hello" value={20}/>
+            
+          </Layer>
+        </Stage>
+      </div>
+
+      <div>
+        <button
+          style={{ backgroundColor: 'gray', color: 'white' }}
+          onMouseDown={() => setIsupPressed(true)}
+          onMouseUp={() => setIsupPressed(false)}
+          onMouseLeave={() => setIsupPressed(false)}
+        >
+          UP
+        </button>
+      </div>
+      <div>
+        <button
+          style={{ backgroundColor: 'gray', color: 'white' }}
+          onMouseDown={() => setIsDownPressed(true)}
+          onMouseUp={() => setIsDownPressed(false)}
+          onMouseLeave={() => setIsDownPressed(false)}
+        >
+          DOWN
+        </button>
+      </div>
+      <p>Speed: {speed}</p>
+    </div>
+  );
+};
+
+const rectSizex = 200;
+const rectSizey = 600;
+const rectX = (window.innerWidth - rectSizex) / 2;
+const rectY = (window.innerHeight - rectSizey) / 2;
+const ticks = 100;
+const tickSpacing = 100;
+
+const Boarder: React.FC<{ lineY: number }> = ({ lineY }) => {
+  return (
+    <Group
+      x={rectX}
+      y={rectY}
+      clipX={0}
+      clipY={0}
+      clipWidth={rectSizex}
+      clipHeight={rectSizey}
+    >
+      <Rect
+        x={0}
+        y={0}
+        width={rectSizex}
+        height={rectSizey}
+        fill="grey"
+        stroke="grey"
+        strokeWidth={2}
+      />
+      <LineMain lineY={lineY} />
+      <TextNumbers lineY={lineY} />
+    </Group>
+  );
+};
+
+const LineMain: React.FC<{ lineY: number }> = ({ lineY }) => {
+  const tickMarks = [];
+  const lineXStart = rectSizex;
+  const lineXEnd = 100;
+
+  for (let i = 0; i < ticks; i++) {
+    const lineYPosition = i * tickSpacing;
+    tickMarks.push(
+      <Line
+        key={i}
+        points={[lineXStart, lineYPosition + lineY, lineXEnd, lineYPosition + lineY]}
+        stroke="black"
+        strokeWidth={2}
+      />
+    );
+  }
+  return <>{tickMarks}</>;
+};
+
+const TextNumbers: React.FC<{ lineY: number }> = ({ lineY }) => {
+  const numberMarks = [];
+  for (let i = 0; i < ticks; i++) {
+    const lineYPosition = i * tickSpacing;
+    numberMarks.push(
+      <Text
+        key={i} //add a unique key for each text element
+        x={80}
+        y={lineYPosition - 5 + lineY}
+        text={i.toString()} //display the number as text
+        fontSize={12}
+        fill="black"
+      />
+    );
+  }
+  return <>{numberMarks}</>;
+};
